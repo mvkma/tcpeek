@@ -15,12 +15,19 @@ struct ipv4_data_t {
   u16 dport;
   unsigned short family;
   unsigned char state;
+  unsigned char evtype;
   char task[TASK_COMM_LEN];
 };
 
-BPF_RINGBUF_OUTPUT(ipv4_connect, 1 << 4);
-BPF_RINGBUF_OUTPUT(ipv4_do_rcv, 1 << 4);
-BPF_RINGBUF_OUTPUT(ipv4_set_state, 1 << 4);
+enum EVENTS {
+  CONNECT = 1,
+  SET_STATE = 2,
+  DO_RCV_START = 3,
+  DO_RCV_DONE = 4,
+  DONE = 5
+};
+
+BPF_RINGBUF_OUTPUT(ipv4_events, 1 << 8);
 
 static void set_ipv4_data(struct ipv4_data_t *data, struct sock *skp) {
   u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -41,6 +48,23 @@ static void set_ipv4_data(struct ipv4_data_t *data, struct sock *skp) {
   bpf_get_current_comm(&data->task, sizeof(data->task));
 }
 
+KRETFUNC_PROBE(tcp_done, struct sock *skp, int ret) {
+  // if (ret != 0) {
+  //   return 0;
+  // }
+
+  if (skp->__sk_common.skc_family != AF_INET) {
+    return 0;
+  }
+
+  struct ipv4_data_t data = {0};
+  set_ipv4_data(&data, skp);
+  data.evtype = DONE;
+  ipv4_events.ringbuf_output(&data, sizeof(data), 0);
+
+  return 0;
+}
+
 KRETFUNC_PROBE(tcp_set_state, struct sock *skp, int state, int ret) {
   // if (ret != 0) {
   //   return 0;
@@ -52,7 +76,8 @@ KRETFUNC_PROBE(tcp_set_state, struct sock *skp, int state, int ret) {
 
   struct ipv4_data_t data = {0};
   set_ipv4_data(&data, skp);
-  ipv4_set_state.ringbuf_output(&data, sizeof(data), 0);
+  data.evtype = SET_STATE;
+  ipv4_events.ringbuf_output(&data, sizeof(data), 0);
 
   return 0;
 }
@@ -64,19 +89,8 @@ KRETFUNC_PROBE(tcp_v4_connect, struct sock *skp, struct sockaddr *uaddr, int add
 
   struct ipv4_data_t data = {0};
   set_ipv4_data(&data, skp);
-  ipv4_connect.ringbuf_output(&data, sizeof(data), 0);
-
-  return 0;
-}
-
-KRETFUNC_PROBE(tcp_v4_do_rcv, struct sock *skp, struct sk_buff *skb, int ret) {
-  if (ret != 0) {
-    return 0;
-  }
-
-  struct ipv4_data_t data = {0};
-  set_ipv4_data(&data, skp);
-  ipv4_do_rcv.ringbuf_output(&data, sizeof(data), 0);
+  data.evtype = CONNECT;
+  ipv4_events.ringbuf_output(&data, sizeof(data), 0);
 
   return 0;
 }
