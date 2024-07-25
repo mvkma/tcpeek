@@ -32,7 +32,7 @@ class TCPState(Enum):
     TCP_BOUND_INACTIVE = 13
     TCP_MAX_STATES = 14
 
-b = bcc.BPF(src_file=b"netbpf.c")
+b = bcc.BPF(src_file=b"netbpf.c", debug=bcc.DEBUG_PREPROCESSOR)
 
 sockets = dict()
 
