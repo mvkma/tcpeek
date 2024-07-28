@@ -1,6 +1,7 @@
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include <bpf/bpf_core_read.h>
 
 #include "netbpf2.h"
 
@@ -25,20 +26,23 @@ struct {
 SEC("kprobe/tcp_set_state")
 int BPF_KPROBE(tcp_set_state, struct sock *skp, int state) {
   struct ipv4_event *event;
+  struct sock_common sk_common;
 
   event = bpf_ringbuf_reserve(&events_ipv4, sizeof(*event), 0);
   if (!event)
     return 1;
 
+  sk_common = BPF_CORE_READ(skp, __sk_common);
+
   event->pid = bpf_get_current_pid_tgid() >> 32;
   event->uid = bpf_get_current_uid_gid();
-  //event->hash = skp->__sk_common.skc_hash;
-  //event->saddr = skp->__sk_common.skc_rcv_saddr;
-  //event->daddr = skp->__sk_common.skc_daddr;
-  //event->lport = skp->__sk_common.skc_num;
-  //event->dport = skp->__sk_common.skc_dport;
-  //event->family = skp->__sk_common.skc_family;
-  //event->state = skp->__sk_common.skc_state;
+  event->hash = sk_common.skc_hash;
+  event->saddr = sk_common.skc_rcv_saddr;
+  event->daddr = sk_common.skc_daddr;
+  event->lport = sk_common.skc_num;
+  event->dport = sk_common.skc_dport;
+  event->family = sk_common.skc_family;
+  event->state = sk_common.skc_state;
 
   bpf_get_current_comm(event->task, sizeof(event->task));
 

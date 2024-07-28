@@ -9,12 +9,13 @@
 static int event_handler(void *ctx, void *data, size_t size) {
   struct ipv4_event *event = data;
 
-  printf("pid=%d, uid=%d, saddr=%d, daddr=%d, state=%d\n",
+  printf("pid=%d, uid=%d, saddr=%d, daddr=%d, state=%d, hash=%llu\n",
          event->pid,
          event->uid,
          event->saddr,
          event->daddr,
-         event->state);
+         event->state,
+         event->hash);
 
   return 0;
 }
