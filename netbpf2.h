@@ -8,6 +8,7 @@
 struct ipv4_event {
   __u64 hash;
   __u32 pid;
+  __u32 tid;
   __u32 uid;
   __u32 saddr;
   __u32 daddr;

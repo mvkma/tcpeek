@@ -16,7 +16,12 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-int my_pid = 0;
+struct {
+  __uint(type, BPF_MAP_TYPE_HASH);
+  __uint(max_entries, 1024);
+  __type(key, u32);
+  __type(value, struct sock *);
+} sockets SEC(".maps");
 
 struct {
   __uint(type, BPF_MAP_TYPE_RINGBUF);
@@ -25,8 +30,36 @@ struct {
 
 SEC("kprobe/tcp_set_state")
 int BPF_KPROBE(tcp_set_state, struct sock *skp, int state) {
+  __u64 pid_tgid = bpf_get_current_pid_tgid();
+  __u32 pid = pid_tgid >> 32;
+  __u32 tid = pid_tgid;
+
+  bpf_map_update_elem(&sockets, &tid, &skp, 0);
+
+  return 0;
+}
+
+SEC("kretprobe/tcp_set_state")
+int BPF_KRETPROBE(tcp_set_state_ret, int ret) {
   struct ipv4_event *event;
+  struct sock *skp;
+  struct sock **skpp;
   struct sock_common sk_common;
+
+  __u64 pid_tgid = bpf_get_current_pid_tgid();
+  __u32 pid = pid_tgid >> 32;
+  __u32 tid = pid_tgid;
+
+  skpp = bpf_map_lookup_elem(&sockets, &tid);
+  if (!skpp)
+    return 0;
+
+  if (ret != 0) {
+    bpf_map_delete_elem(&sockets, &tid);
+    return 1;
+  }
+
+  skp = *skpp;
 
   event = bpf_ringbuf_reserve(&events_ipv4, sizeof(*event), 0);
   if (!event)
@@ -34,7 +67,8 @@ int BPF_KPROBE(tcp_set_state, struct sock *skp, int state) {
 
   sk_common = BPF_CORE_READ(skp, __sk_common);
 
-  event->pid = bpf_get_current_pid_tgid() >> 32;
+  event->pid = pid;
+  event->tid = tid;
   event->uid = bpf_get_current_uid_gid();
   event->hash = sk_common.skc_hash;
   event->saddr = sk_common.skc_rcv_saddr;

@@ -1,5 +1,7 @@
+#include <netinet/in.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/resource.h>
 #include <bpf/libbpf.h>
 
@@ -8,13 +10,30 @@
 
 static int event_handler(void *ctx, void *data, size_t size) {
   struct ipv4_event *event = data;
+  struct in_addr src;
+  struct in_addr dst;
+  char saddr[INET_ADDRSTRLEN];
+  char daddr[INET_ADDRSTRLEN];
 
-  printf("pid=%d, uid=%d, saddr=%d, daddr=%d, state=%d, hash=%llu\n",
+  src.s_addr = event->saddr;
+  dst.s_addr = event->daddr;
+
+  if (event->family == AF_INET) {
+    inet_ntop(AF_INET, &src, saddr, sizeof(saddr));
+    inet_ntop(AF_INET, &dst, daddr, sizeof(daddr));
+  } else {
+    inet_ntop(AF_INET6, &src, saddr, sizeof(saddr));
+    inet_ntop(AF_INET6, &dst, daddr, sizeof(daddr));
+  }
+
+  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu\n",
          event->pid,
+         event->tid,
          event->uid,
-         event->saddr,
-         event->daddr,
+         saddr,
+         daddr,
          event->state,
+         event->family,
          event->hash);
 
   return 0;
@@ -55,6 +74,8 @@ int main(int argc, char **argv)
   }
 
   printf("Running...\n");
+  printf("%-7s %-7s %-7s %-25s %-25s %-5s %-5s %s\n",
+         "PID", "TID", "UID", "SADDR", "DADDR", "STATE", "FAM", "HASH");
 
   while (ring_buffer__poll(ringbuffer, -1) >= 0) {
   }
