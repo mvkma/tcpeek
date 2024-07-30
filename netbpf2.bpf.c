@@ -5,6 +5,9 @@
 
 #include "netbpf2.h"
 
+#define AF_INET		2
+#define AF_INET6	10
+
 /*
  * clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -I. -idirafter /usr/lib/clang/18/include -idirafter /usr/local/include -idirafter /usr/include -c netbpf2.bpf.c -o netbpf2.tmp.bpf.o
  * bpftool gen object netbpf2.bpf.o netbpf2.tmp.bpf.o
@@ -41,7 +44,7 @@ int BPF_KPROBE(tcp_set_state, struct sock *skp, int state) {
 
 SEC("kretprobe/tcp_set_state")
 int BPF_KRETPROBE(tcp_set_state_ret, int ret) {
-  struct ipv4_event *event;
+  struct tcp_event *event;
   struct sock *skp;
   struct sock **skpp;
   struct sock_common sk_common;
@@ -71,12 +74,22 @@ int BPF_KRETPROBE(tcp_set_state_ret, int ret) {
   event->tid = tid;
   event->uid = bpf_get_current_uid_gid();
   event->hash = sk_common.skc_hash;
-  event->saddr = sk_common.skc_rcv_saddr;
-  event->daddr = sk_common.skc_daddr;
   event->lport = sk_common.skc_num;
   event->dport = sk_common.skc_dport;
   event->family = sk_common.skc_family;
   event->state = sk_common.skc_state;
+
+  switch (event->family) {
+  case AF_INET:
+    event->saddr4 = sk_common.skc_rcv_saddr;
+    event->daddr4 = sk_common.skc_daddr;
+    break;
+  case AF_INET6:
+    BPF_CORE_READ_INTO(&event->saddr6, &sk_common.skc_v6_rcv_saddr.in6_u, u6_addr32);
+    BPF_CORE_READ_INTO(&event->daddr6, &sk_common.skc_v6_daddr.in6_u, u6_addr32);
+  default:
+    break;
+  }
 
   bpf_get_current_comm(event->task, sizeof(event->task));
 

@@ -1,5 +1,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/resource.h>
@@ -8,25 +10,19 @@
 #include "netbpf2.skel.h"
 #include "netbpf2.h"
 
-static int event_handler(void *ctx, void *data, size_t size) {
-  struct ipv4_event *event = data;
+static int handle_ipv4(struct tcp_event *event) {
   struct in_addr src;
   struct in_addr dst;
   char saddr[INET_ADDRSTRLEN];
   char daddr[INET_ADDRSTRLEN];
 
-  src.s_addr = event->saddr;
-  dst.s_addr = event->daddr;
+  src.s_addr = event->saddr4;
+  dst.s_addr = event->daddr4;
 
-  if (event->family == AF_INET) {
-    inet_ntop(AF_INET, &src, saddr, sizeof(saddr));
-    inet_ntop(AF_INET, &dst, daddr, sizeof(daddr));
-  } else {
-    inet_ntop(AF_INET6, &src, saddr, sizeof(saddr));
-    inet_ntop(AF_INET6, &dst, daddr, sizeof(daddr));
-  }
+  inet_ntop(AF_INET, &src, saddr, sizeof(saddr));
+  inet_ntop(AF_INET, &dst, daddr, sizeof(daddr));
 
-  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu\n",
+  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv4)\n",
          event->pid,
          event->tid,
          event->uid,
@@ -35,6 +31,48 @@ static int event_handler(void *ctx, void *data, size_t size) {
          event->state,
          event->family,
          event->hash);
+
+  return 0;
+}
+
+static int handle_ipv6(struct tcp_event *event) {
+  struct in6_addr src;
+  struct in6_addr dst;
+  char saddr[INET6_ADDRSTRLEN];
+  char daddr[INET6_ADDRSTRLEN];
+
+  memcpy(src.s6_addr, event->saddr6, sizeof(src.s6_addr));
+  memcpy(dst.s6_addr, event->daddr6, sizeof(dst.s6_addr));
+
+  inet_ntop(AF_INET6, &src, saddr, sizeof(saddr));
+  inet_ntop(AF_INET6, &dst, daddr, sizeof(daddr));
+
+  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv6)\n",
+         event->pid,
+         event->tid,
+         event->uid,
+         saddr,
+         daddr,
+         event->state,
+         event->family,
+         event->hash);
+
+  return 0;
+}
+
+static int event_handler(void *ctx, void *data, size_t size) {
+  struct tcp_event *event = data;
+
+  switch (event->family) {
+  case AF_INET:
+    return handle_ipv4(data);
+    break;
+  case AF_INET6:
+    return handle_ipv6(data);
+    break;
+  default:
+    break;
+  }
 
   return 0;
 }
