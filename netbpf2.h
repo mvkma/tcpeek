@@ -5,6 +5,12 @@
 #define TASK_COMM_LEN 16
 #endif
 
+enum tcp_event_type {
+  EVTYPE_CONNECT = 1,
+  EVTYPE_SET_STATE = 2,
+  EVTYPE_DONE = 10
+};
+
 struct tcp_event {
   __u64 hash;
   __u32 pid;
