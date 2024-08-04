@@ -16,6 +16,8 @@ struct tcp_event {
   __u8 daddr6[16];
   __u16 lport;
   __u16 dport;
+  __u64 bytes_received;
+  __u64 bytes_acked;
   unsigned short family;
   unsigned char state;
   void *skp;

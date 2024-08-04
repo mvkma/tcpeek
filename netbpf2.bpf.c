@@ -45,6 +45,7 @@ static int kprobe_exit(int ret) {
   struct tcp_event *event;
   struct sock *skp;
   struct sock **skpp;
+  struct tcp_sock *tp;
   struct sock_common sk_common;
 
   __u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -61,6 +62,8 @@ static int kprobe_exit(int ret) {
   }
 
   skp = *skpp;
+  // TODO: I don't know why this is supposed to work.
+  tp = (struct tcp_sock *)skp;
 
   event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
   if (!event)
@@ -74,6 +77,8 @@ static int kprobe_exit(int ret) {
   event->hash = sk_common.skc_hash;
   event->lport = sk_common.skc_num;
   event->dport = sk_common.skc_dport;
+  event->bytes_received = BPF_CORE_READ(tp, bytes_received);
+  event->bytes_acked = BPF_CORE_READ(tp, bytes_acked);
   event->family = sk_common.skc_family;
   event->state = sk_common.skc_state;
   event->skp = (void *)skp;
