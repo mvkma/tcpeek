@@ -10,8 +10,8 @@
 #include "netbpf2.skel.h"
 #include "netbpf2.h"
 
-char HEADER_FORMAT[] = "%-7s %-7s %-7s %-25s %-25s %-5s %-8s %-8s %-8s %s\n";
-char EVENTS_FORMAT[] = "%-7d %-7d %-7d %-25s %-25s %-5d %-8s %-8f %-8f %p\n";
+char HEADER_FORMAT[] = "%-7s %-7s %-7s %-25s %-25s %-20s %-8s %-8s %-8s %s\n";
+char EVENTS_FORMAT[] = "%-7d %-7d %-7d %-25s %-25s %-20s %-8s %-8f %-8f %p\n";
 
 static char* get_family_name(unsigned short family) {
   switch (family) {
@@ -27,6 +27,55 @@ static char* get_family_name(unsigned short family) {
   }
 }
 
+static char* get_tcp_state(unsigned char state) {
+  switch (state) {
+  case BPF_TCP_ESTABLISHED:
+    return "TCP_ESTABLISHED";
+    break;
+  case BPF_TCP_SYN_SENT:
+    return "TCP_SYN_SENT";
+    break;
+  case BPF_TCP_SYN_RECV:
+    return "TCP_SYN_RECV";
+    break;
+  case BPF_TCP_FIN_WAIT1:
+    return "TCP_FIN_WAIT1";
+    break;
+  case BPF_TCP_FIN_WAIT2:
+    return "TCP_FIN_WAIT2";
+    break;
+  case BPF_TCP_TIME_WAIT:
+    return "TCP_TIME_WAIT";
+    break;
+  case BPF_TCP_CLOSE:
+    return "TCP_CLOSE";
+    break;
+  case BPF_TCP_CLOSE_WAIT:
+    return "TCP_CLOSE_WAIT";
+    break;
+  case BPF_TCP_LAST_ACK:
+    return "TCP_LAST_ACK";
+    break;
+  case BPF_TCP_LISTEN:
+    return "TCP_LISTEN";
+    break;
+  case BPF_TCP_CLOSING:
+    return "TCP_CLOSING";
+    break;
+  case BPF_TCP_NEW_SYN_RECV:
+    return "TCP_NEW_SYN_RECV";
+    break;
+  case BPF_TCP_BOUND_INACTIVE:
+    return "TCP_BOUND_INACTIVE";
+    break;
+  case BPF_TCP_MAX_STATES:
+    return "TCP_MAX_STATES";
+    break;
+  default:
+    return "UNKNOWN";
+  }
+}
+
 static int print_event(struct tcp_event *event, char *saddr, char *daddr) {
   printf(EVENTS_FORMAT,
          event->pid,
@@ -34,7 +83,7 @@ static int print_event(struct tcp_event *event, char *saddr, char *daddr) {
          event->uid,
          saddr,
          daddr,
-         event->state,
+         get_tcp_state(event->state),
          get_family_name(event->family),
          (double)event->bytes_received / 1024,
          (double)event->bytes_acked / 1024,
