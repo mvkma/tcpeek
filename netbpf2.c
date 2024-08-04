@@ -10,6 +10,39 @@
 #include "netbpf2.skel.h"
 #include "netbpf2.h"
 
+char HEADER_FORMAT[] = "%-7s %-7s %-7s %-25s %-25s %-5s %-8s %-8s %-8s %s\n";
+char EVENTS_FORMAT[] = "%-7d %-7d %-7d %-25s %-25s %-5d %-8s %-8f %-8f %p\n";
+
+static char* get_family_name(unsigned short family) {
+  switch (family) {
+  case AF_INET:
+    return "AF_INET";
+    break;
+  case AF_INET6:
+    return "AF_INET6";
+    break;
+  default:
+    return "UNKNOWN";
+    break;
+  }
+}
+
+static int print_event(struct tcp_event *event, char *saddr, char *daddr) {
+  printf(EVENTS_FORMAT,
+         event->pid,
+         event->tid,
+         event->uid,
+         saddr,
+         daddr,
+         event->state,
+         get_family_name(event->family),
+         (double)event->bytes_received / 1024,
+         (double)event->bytes_acked / 1024,
+         event->skp);
+
+  return 0;
+}
+
 static int handle_ipv4(struct tcp_event *event) {
   struct in_addr src;
   struct in_addr dst;
@@ -22,17 +55,7 @@ static int handle_ipv4(struct tcp_event *event) {
   inet_ntop(AF_INET, &src, saddr, sizeof(saddr));
   inet_ntop(AF_INET, &dst, daddr, sizeof(daddr));
 
-  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %-8f %-8f %p (ipv4)\n",
-         event->pid,
-         event->tid,
-         event->uid,
-         saddr,
-         daddr,
-         event->state,
-         event->family,
-         (double)event->bytes_received / 1024,
-         (double)event->bytes_acked / 1024,
-         event->skp);
+  print_event(event, saddr, daddr);
 
   return 0;
 }
@@ -49,17 +72,7 @@ static int handle_ipv6(struct tcp_event *event) {
   inet_ntop(AF_INET6, &src, saddr, sizeof(saddr));
   inet_ntop(AF_INET6, &dst, daddr, sizeof(daddr));
 
-  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %-8f %-8f %p (ipv6)\n",
-         event->pid,
-         event->tid,
-         event->uid,
-         saddr,
-         daddr,
-         event->state,
-         event->family,
-         (double)event->bytes_received / 1024,
-         (double)event->bytes_acked / 1024,
-         event->skp);
+  print_event(event, saddr, daddr);
 
   return 0;
 }
@@ -116,8 +129,8 @@ int main(int argc, char **argv)
   }
 
   printf("Running...\n");
-  printf("%-7s %-7s %-7s %-25s %-25s %-5s %-5s %-8s %-8s %s\n",
-         "PID", "TID", "UID", "SADDR", "DADDR", "STATE", "FAM", "RX [KiB]", "TX [KiB]", "HASH");
+  printf(HEADER_FORMAT,
+         "PID", "TID", "UID", "SADDR", "DADDR", "STATE", "FAMILY", "RX [KiB]", "TX [KiB]", "HASH");
 
   while (ring_buffer__poll(ringbuffer, -1) >= 0) {
   }
