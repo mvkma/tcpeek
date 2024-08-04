@@ -29,7 +29,7 @@ struct {
 struct {
   __uint(type, BPF_MAP_TYPE_RINGBUF);
   __uint(max_entries, 1024);
-} events_ipv4 SEC(".maps");
+} events SEC(".maps");
 
 static int kprobe_enter(struct sock *skp) {
   __u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -41,7 +41,7 @@ static int kprobe_enter(struct sock *skp) {
   return 0;
 }
 
-static int kprobe_exit(int ret, unsigned short evtype) {
+static int kprobe_exit(int ret) {
   struct tcp_event *event;
   struct sock *skp;
   struct sock **skpp;
@@ -62,7 +62,7 @@ static int kprobe_exit(int ret, unsigned short evtype) {
 
   skp = *skpp;
 
-  event = bpf_ringbuf_reserve(&events_ipv4, sizeof(*event), 0);
+  event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
   if (!event)
     return 1;
 
@@ -76,7 +76,7 @@ static int kprobe_exit(int ret, unsigned short evtype) {
   event->dport = sk_common.skc_dport;
   event->family = sk_common.skc_family;
   event->state = sk_common.skc_state;
-  event->evtype = evtype;
+  event->skp = (void *)skp;
 
   switch (event->family) {
   case AF_INET:
@@ -102,29 +102,7 @@ int BPF_KPROBE(tcp_set_state, struct sock *skp, int state) {
   return kprobe_enter(skp);
 }
 
-SEC("kprobe/tcp_done")
-int BPF_KPROBE(tcp_done, struct sock *skp) {
-  return kprobe_enter(skp);
-}
-
-SEC("kprobe/tcp_connect")
-int BPF_KPROBE(tcp_connect, struct sock *skp) {
-  return kprobe_enter(skp);
-}
-
 SEC("kretprobe/tcp_set_state")
 int BPF_KRETPROBE(tcp_set_state_ret, int ret) {
-  return kprobe_exit(ret, EVTYPE_SET_STATE);
+  return kprobe_exit(ret);
 }
-
-SEC("kretprobe/tcp_done")
-int BPF_KRETPROBE(tcp_done_ret) {
-  // tcp_done is a void function
-  return kprobe_exit(0, EVTYPE_DONE);
-}
-
-SEC("kretprobe/tcp_connect")
-int BPF_KRETPROBE(tcp_connect_ret, int ret) {
-  return kprobe_exit(ret, EVTYPE_CONNECT);
-}
-
