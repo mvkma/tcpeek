@@ -107,13 +107,24 @@ int BPF_KPROBE(tcp_done, struct sock *skp) {
   return kprobe_enter(skp);
 }
 
+SEC("kprobe/tcp_connect")
+int BPF_KPROBE(tcp_connect, struct sock *skp) {
+  return kprobe_enter(skp);
+}
+
 SEC("kretprobe/tcp_set_state")
 int BPF_KRETPROBE(tcp_set_state_ret, int ret) {
   return kprobe_exit(ret, EVTYPE_SET_STATE);
 }
 
 SEC("kretprobe/tcp_done")
-int BPF_KRETPROBE(tcp_done_ret, int ret) {
-  return kprobe_exit(ret, EVTYPE_DONE);
+int BPF_KRETPROBE(tcp_done_ret) {
+  // tcp_done is a void function
+  return kprobe_exit(0, EVTYPE_DONE);
+}
+
+SEC("kretprobe/tcp_connect")
+int BPF_KRETPROBE(tcp_connect_ret, int ret) {
+  return kprobe_exit(ret, EVTYPE_CONNECT);
 }
 

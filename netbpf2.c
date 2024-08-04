@@ -22,7 +22,8 @@ static int handle_ipv4(struct tcp_event *event) {
   inet_ntop(AF_INET, &src, saddr, sizeof(saddr));
   inet_ntop(AF_INET, &dst, daddr, sizeof(daddr));
 
-  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv4)\n",
+  printf("%-3d %-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv4)\n",
+         event->evtype,
          event->pid,
          event->tid,
          event->uid,
@@ -47,7 +48,8 @@ static int handle_ipv6(struct tcp_event *event) {
   inet_ntop(AF_INET6, &src, saddr, sizeof(saddr));
   inet_ntop(AF_INET6, &dst, daddr, sizeof(daddr));
 
-  printf("%-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv6)\n",
+  printf("%-3d %-7d %-7d %-7d %-25s %-25s %-5d %-5d %llu (ipv6)\n",
+         event->evtype,
          event->pid,
          event->tid,
          event->uid,
@@ -112,8 +114,8 @@ int main(int argc, char **argv)
   }
 
   printf("Running...\n");
-  printf("%-7s %-7s %-7s %-25s %-25s %-5s %-5s %s\n",
-         "PID", "TID", "UID", "SADDR", "DADDR", "STATE", "FAM", "HASH");
+  printf("%-3s %-7s %-7s %-7s %-25s %-25s %-5s %-5s %s\n",
+         "E", "PID", "TID", "UID", "SADDR", "DADDR", "STATE", "FAM", "HASH");
 
   while (ring_buffer__poll(ringbuffer, -1) >= 0) {
   }

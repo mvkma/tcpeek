@@ -13,11 +13,11 @@ CLANG_INCLUDE_FLAGS := -I.
 CLANG_FLAGS := -g -Wall
 LINKER_FLAGS := -lelf -lz
 
-.PHONY: skels
-skels: $(BPF_SKELS)
-
 .PHONY: all
 all: $(PROGS)
+
+.PHONY: skels
+skels: $(BPF_SKELS)
 
 .PHONY: clean
 clean:
