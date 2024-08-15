@@ -149,16 +149,9 @@ int main(int argc, char **argv)
   struct ring_buffer *ringbuffer;
   int err;
 
-  skel = netbpf2_bpf__open();
+  skel = netbpf2_bpf__open_and_load();
   if (!skel) {
-    fprintf(stderr, "Failed to open BPF skeleton.\n");
-    return 1;
-  }
-
-  err = netbpf2_bpf__load(skel);
-  if (err) {
-    fprintf(stderr, "Failed to load and verify BPF skeleton.\n");
-    netbpf2_bpf__destroy(skel);
+    fprintf(stderr, "Failed to open, load and verify BPF skeleton.\n");
     return 1;
   }
 
