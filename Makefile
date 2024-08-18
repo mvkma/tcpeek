@@ -5,13 +5,11 @@ PROGS     := $(patsubst %.c,%,$(SRCS))
 ARCH      := x86
 VMLINUX   := vmlinux.h
 
-BPF_INCLUDE_FLAGS := -I. \
-	-idirafter /usr/lib/clang/18/include \
-	-idirafter /usr/local/include \
-	-idirafter /usr/include
+BPF_INCLUDE_FLAGS := -I.
+BPF_FLAGS := -g -O2
 CLANG_INCLUDE_FLAGS := -I.
 CLANG_FLAGS := -g -Wall
-LINKER_FLAGS := -lelf -lz
+LINKER_FLAGS :=
 
 .PHONY: all
 all: $(PROGS)
@@ -21,12 +19,12 @@ skels: $(BPF_SKELS)
 
 .PHONY: clean
 clean:
-	rm $(addsuffix .tmp.bpf.o,$(PROGS))
-	rm $(addsuffix .bpf.o,$(PROGS))
-	rm $(addsuffix .o,$(PROGS))
-	rm $(BPF_SKELS)
-	rm $(PROGS)
-	rm $(VMLINUX)
+	rm -f $(addsuffix .tmp.bpf.o,$(PROGS))
+	rm -f $(addsuffix .bpf.o,$(PROGS))
+	rm -f $(addsuffix .o,$(PROGS))
+	rm -f $(BPF_SKELS)
+	rm -f $(PROGS)
+	rm -f $(VMLINUX)
 
 vmlinux: $(VMLINUX)
 
@@ -34,7 +32,7 @@ $(VMLINUX):
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
 $(BPF_SKELS): $(BPF_SRCS) $(VMLINUX)
-	clang -g -O2 -target bpf -D__TARGET_ARCH_x86 $(BPF_INCLUDE_FLAGS) -c $(patsubst %.skel.h,%.bpf.c,$@) -o $(patsubst %.skel.h,%.tmp.bpf.o,$@)
+	clang $(BPF_FLAGS) -target bpf -D__TARGET_ARCH_x86 $(BPF_INCLUDE_FLAGS) -c $(patsubst %.skel.h,%.bpf.c,$@) -o $(patsubst %.skel.h,%.tmp.bpf.o,$@)
 	bpftool gen object $(patsubst %.skel.h,%.bpf.o,$@) $(patsubst %.skel.h,%.tmp.bpf.o,$@)
 	bpftool gen skeleton $(patsubst %.skel.h,%.bpf.o,$@) > $@
 
