@@ -1,1 +1,19 @@
-* netbpf
+* tcpeek
+
+A very simple eBPF application that attaches a kernel probe to ~tcp_set_state~.
+The code is based on the demo applications in [[https://github.com/libbpf/libbpf-bootstrap][libbpf-bootstrap]].
+
+Compile:
+#+begin_src shell
+  make
+#+end_src
+
+Run:
+#+begin_src shell
+  sudo ./tcpeek
+#+end_src
+
+Resources:
+- https://libbpf.readthedocs.io/en/latest/api.html
+- https://github.com/libbpf/libbpf-bootstrap
+- https://www.kernel.org/doc/html/latest/bpf/index.html

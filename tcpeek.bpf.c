@@ -3,19 +3,10 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 
-#include "netbpf2.h"
+#include "tcpeek.h"
 
 #define AF_INET		2
 #define AF_INET6	10
-
-/*
- * clang -g -O2 -target bpf -D__TARGET_ARCH_x86 -I. -idirafter /usr/lib/clang/18/include -idirafter /usr/local/include -idirafter /usr/include -c netbpf2.bpf.c -o netbpf2.tmp.bpf.o
- * bpftool gen object netbpf2.bpf.o netbpf2.tmp.bpf.o
- * bpftool gen skeleton netbpf2.bpf.o > netbpf2.skel.h
- *
- * clang -g -Wall -I. -c netbpf2.c -o netbpf2.o
- * clang -g -Wall netbpf2.o /usr/lib/libbpf.so -lelf -lz -o netbpf2
- */
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 

@@ -7,8 +7,8 @@
 #include <sys/resource.h>
 #include <bpf/libbpf.h>
 
-#include "netbpf2.skel.h"
-#include "netbpf2.h"
+#include "tcpeek.skel.h"
+#include "tcpeek.h"
 
 char HEADER_FORMAT[] = "%-7s %-7s %-7s %-25s %-25s %-20s %-8s %-8s %-8s %s\n";
 char EVENTS_FORMAT[] = "%-7d %-7d %-7d %-25s %-25s %-20s %-8s %-8f %-8f %p\n";
@@ -145,20 +145,20 @@ static int event_handler(void *ctx, void *data, size_t size) {
 
 int main(int argc, char **argv)
 {
-  struct netbpf2_bpf *skel;
+  struct tcpeek_bpf *skel;
   struct ring_buffer *ringbuffer;
   int err;
 
-  skel = netbpf2_bpf__open_and_load();
+  skel = tcpeek_bpf__open_and_load();
   if (!skel) {
     fprintf(stderr, "Failed to open, load and verify BPF skeleton.\n");
     return 1;
   }
 
-  err = netbpf2_bpf__attach(skel);
+  err = tcpeek_bpf__attach(skel);
   if (err) {
     fprintf(stderr, "Failed to attach BPF skeleton.\n");
-    netbpf2_bpf__destroy(skel);
+    tcpeek_bpf__destroy(skel);
     return 1;
   }
 
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
   if (!ringbuffer) {
     fprintf(stderr, "Failed to create ringbuffer.\n");
     ring_buffer__free(ringbuffer);
-    netbpf2_bpf__destroy(skel);
+    tcpeek_bpf__destroy(skel);
     return 1;
   }
 

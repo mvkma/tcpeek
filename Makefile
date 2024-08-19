@@ -1,4 +1,4 @@
-SRCS      := netbpf2.c
+SRCS      := tcpeek.c
 BPF_SRCS  := $(patsubst %.c,%.bpf.c,$(SRCS))
 BPF_SKELS := $(patsubst %.bpf.c,%.skel.h,$(BPF_SRCS))
 PROGS     := $(patsubst %.c,%,$(SRCS))
